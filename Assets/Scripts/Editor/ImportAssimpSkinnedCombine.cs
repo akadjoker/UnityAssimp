@@ -13,7 +13,7 @@ public static class ImportAssimpSkinnedCombine
     public static bool saveAssets = true;
     public static bool useTangents = true;
     public static bool ignoreRotations = false;
-    public static bool ignorePositions = true;
+    public static bool ignorePositions = false;
     public static bool ignoreScalling = true;
 
     private static StreamWriter streamWriter;
@@ -142,6 +142,7 @@ public static class ImportAssimpSkinnedCombine
         public GameObject meshContainer;
         public SkinnedMeshRenderer meshRenderer;
         public GameObject Root;
+		private int maxBones;
 
 
 
@@ -153,6 +154,8 @@ public static class ImportAssimpSkinnedCombine
             meshContainer.transform.parent = parent.transform;
             meshRenderer = (SkinnedMeshRenderer)meshContainer.AddComponent(typeof(SkinnedMeshRenderer));
             meshRenderer.sharedMesh = new Mesh();
+			meshRenderer.quality=SkinQuality.Auto;
+			maxBones=1;
             meshRenderer.sharedMaterial = new Material(Shader.Find("Diffuse"));
             geometry = meshRenderer.sharedMesh;
             joints = new List<AssimpJoint>();
@@ -265,7 +268,7 @@ public static class ImportAssimpSkinnedCombine
 
                          break;
                  }
-
+				maxBones=Math.Max(maxBones,vertex.numbones);
 
                  trace("----------");
                  trace(" ");
@@ -310,6 +313,42 @@ public static class ImportAssimpSkinnedCombine
             geometry.Optimize();
             meshRenderer.sharedMesh = geometry;
             meshRenderer.bones = bones.ToArray();
+
+			
+			switch (maxBones) 
+			{
+			case 0:
+			{
+				Debug.Log (" ?0?  set 1 bones ");
+				meshRenderer.quality=SkinQuality.Bone1;
+				break;
+			}
+			case 1:
+			{
+				Debug.Log (" is 1 set 1 bones ");
+				meshRenderer.quality=SkinQuality.Bone2;
+				break;
+			}
+			case 2:
+			{
+				meshRenderer.quality=SkinQuality.Bone2;
+				Debug.Log (" set 2 bones ");
+				break;
+			}
+				
+			case 3:
+			{
+				meshRenderer.quality=SkinQuality.Bone4;
+				Debug.Log (" set 4 bones ");
+				break;
+			}
+			default:
+			{
+				Debug.Log ("????? set "+maxBones.ToString()+" bones ???");
+				meshRenderer.quality=SkinQuality.Bone1;
+				break;
+			}
+			}
 
 
         }
@@ -620,7 +659,7 @@ public static class ImportAssimpSkinnedCombine
                         AnimationClip clip = new AnimationClip();
                         string anima = Assimp.aiAnim_GetName(scene, a);
                         clip.name = nm + "_" + anima + "_" + a;
-
+						clip.legacy=true;
 
                         clip.wrapMode = WrapMode.Loop;
 

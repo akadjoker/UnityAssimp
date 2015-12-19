@@ -47,7 +47,7 @@ public static class ImportAssimpSkinned
 
     private static void trace(string msg)
     {
-      //  streamWriter.WriteLine("LOG:" + msg);
+	//	Debug.Log("LOG:" + msg);
     }
 
     public class IBone
@@ -142,7 +142,7 @@ public static class ImportAssimpSkinned
         public GameObject meshContainer;
         public SkinnedMeshRenderer meshRenderer;
         public GameObject Root;
-
+		public int maxBones;
 
 
         public AssimpMesh(GameObject parent, GameObject root, string name)
@@ -152,7 +152,8 @@ public static class ImportAssimpSkinned
             this.Root = root;
             meshContainer.transform.parent = parent.transform;
             meshRenderer = (SkinnedMeshRenderer)meshContainer.AddComponent(typeof(SkinnedMeshRenderer));
-            meshRenderer.sharedMesh = new Mesh();
+			meshRenderer.quality=SkinQuality.Auto;
+		    meshRenderer.sharedMesh = new Mesh();
             meshRenderer.sharedMaterial = new Material(Shader.Find("Diffuse"));
             geometry = meshRenderer.sharedMesh;
             joints = new List<AssimpJoint>();
@@ -164,6 +165,7 @@ public static class ImportAssimpSkinned
             tangents= new List<Vector4>();
             faces = new List<int>();
             bones = new List<Transform>();
+			maxBones=1;
 
         }
         public void addVertex(Vector3 pos, Vector3 normal,Vector4 tan, Vector2 uv)
@@ -200,8 +202,8 @@ public static class ImportAssimpSkinned
         public void BuilSkin()
         {
 
-             
-            
+			Debug.Log ("****** build skin  ******************"); 
+			          
             for (int i = 0; i < BoneVertexList.Count; i++)
             {
                 BoneVertex vertex = BoneVertexList[i];
@@ -267,14 +269,17 @@ public static class ImportAssimpSkinned
                  }
 
 
-                 trace("----------");
-                 trace(" ");
-                 trace(string.Format(" vertex:{0} num Bones:{1} force {2}", i, vertex.numbones,len));
+             //    trace("----------");
+             //    trace(" ");
+               //  trace(string.Format(" vertex:{0} num Bones:{1} force {2}", i, vertex.numbones,len));
+				 maxBones=Math.Max(maxBones,vertex.numbones);
 
-                 trace(string.Format(" bone index :{0}  w:{1}", wight.boneIndex0, wight.weight0));
-                 trace(string.Format(" bone index :{0}  w:{1}", wight.boneIndex1, wight.weight1));
-                 trace(string.Format(" bone index :{0}  w:{1}", wight.boneIndex2, wight.weight2));
-                 trace(string.Format(" bone index :{0}  w:{1}", wight.boneIndex3, wight.weight3));
+			//	Debug.Log(string.Format(" vertex:{0} num Bones:{1} force {2}", i, vertex.numbones,len));
+
+             //    trace(string.Format(" bone index :{0}  w:{1}", wight.boneIndex0, wight.weight0));
+             //    trace(string.Format(" bone index :{0}  w:{1}", wight.boneIndex1, wight.weight1));
+            //     trace(string.Format(" bone index :{0}  w:{1}", wight.boneIndex2, wight.weight2));
+            //     trace(string.Format(" bone index :{0}  w:{1}", wight.boneIndex3, wight.weight3));
 
                  boneWeightsList.Add(wight);
 
@@ -286,6 +291,7 @@ public static class ImportAssimpSkinned
         }
         public void build()
         {
+			Debug.Log ("****** build mesh  ******************"); 
             List<Matrix4x4> bindposes = new List<Matrix4x4>();
 
             for (int i = 0; i < joints.Count; i++)
@@ -310,6 +316,43 @@ public static class ImportAssimpSkinned
             geometry.Optimize();
             meshRenderer.sharedMesh = geometry;
             meshRenderer.bones = bones.ToArray();
+			Debug.Log (string.Format("mesh quality:{0}(num Bones)", maxBones));
+
+			switch (maxBones) 
+			{
+			case 0:
+			{
+				Debug.Log (" ?0?  set 1 bones ");
+				meshRenderer.quality=SkinQuality.Bone1;
+				break;
+			}
+			case 1:
+			{
+				Debug.Log (" is 1 set 1 bones ");
+				meshRenderer.quality=SkinQuality.Bone2;
+				break;
+			}
+			case 2:
+			{
+				meshRenderer.quality=SkinQuality.Bone2;
+				Debug.Log (" set 2 bones ");
+				break;
+			}
+
+			case 3:
+			{
+				meshRenderer.quality=SkinQuality.Bone4;
+				Debug.Log (" set 4 bones ");
+				break;
+			}
+			default:
+				{
+				    Debug.Log ("????? set "+maxBones.ToString()+" bones ???");
+					meshRenderer.quality=SkinQuality.Bone1;
+					break;
+				}
+			}
+		//	meshRenderer.quality = maxBones;
 
 
         }
@@ -350,7 +393,7 @@ public static class ImportAssimpSkinned
 
             Assimp.aiSetImportPropertyFloat(config, Assimp.AI_CONFIG_PP_CT_MAX_SMOOTHING_ANGLE, 60.0f);
             Assimp.aiSetImportPropertyInteger(config,Assimp.AI_CONFIG_PP_LBW_MAX_WEIGHTS,4);
-            // IntPtr scene = Assimp.aiImportFile(path + "/" + filename, (uint)flags);
+           //  IntPtr scene = Assimp.aiImportFile(path + "/" + filename, (uint)flags);
             IntPtr scene = Assimp.aiImportFileWithProperties(path + "/" + filename, (uint)flags, config);
             Assimp.aiReleasePropertyStore(config);
             if (scene == null)
@@ -406,6 +449,13 @@ public static class ImportAssimpSkinned
 
                     Material mat = new Material(Shader.Find("Diffuse"));
                     mat.name = matName;
+					mat.color=diffuse;
+
+				//	Debug.Log(ambient.ToString());
+				//	Debug.Log(diffuse.ToString());
+				//	Debug.Log(specular.ToString());
+				//	Debug.Log(emissive.ToString());
+
 
                     string texturename = path + "/" + fname;
 
@@ -461,6 +511,7 @@ public static class ImportAssimpSkinned
 
                 }
 
+				
                 AssetDatabase.Refresh();
 
                 if (Assimp.aiScene_GetRootNode(scene) != null)
@@ -480,8 +531,9 @@ public static class ImportAssimpSkinned
                     {
 
                         AssimpJoint joint = listJoints[i];
-                        //Transform bone = GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
-                        Transform bone = new GameObject(joint.Name).transform;
+                       Transform bone = GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
+					//	bone.transform.localScale.Set(2,2,2);
+                    //    Transform bone = new GameObject(joint.Name).transform;
                      //   DebugBone debug = (DebugBone)bone.gameObject.AddComponent(typeof(DebugBone));
 
 
@@ -628,7 +680,7 @@ public static class ImportAssimpSkinned
                         AnimationClip clip = new AnimationClip();
                         string anima = Assimp.aiAnim_GetName(scene, a);
                         clip.name = nm + "_" + anima + "_" + a;
-
+						clip.legacy=true;
 
                         clip.wrapMode = WrapMode.Loop;
 
