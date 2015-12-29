@@ -43,8 +43,13 @@ Unit Assimp;
 
 Interface
 
-Const
-  AssimpLib = 'assimp-vc110-mt.dll';
+
+    {$IFDEF WIN32}
+    Const     AssimpLib = 'assimp32.dll';
+    {$ENDIF}
+    {$IFDEF WIN64}
+    Const AssimpLib = 'assimp64.dll';
+    {$ENDIF}
 
 Type
 
